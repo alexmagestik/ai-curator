@@ -1,0 +1,5 @@
+# Optional dependencies for USE_RERANKER=true
+# Install: pip install -r requirements-reranker.txt
+sentence-transformers>=3.0.0
+torch>=2.0.0
+torchvision>=0.15.0

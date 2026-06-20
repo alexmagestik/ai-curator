@@ -1,0 +1,20 @@
+[
+  {
+    "title": "Домашняя работа №1",
+    "deadline": "2026-07-10",
+    "module": "module_01",
+    "description": "Настройка окружения и базовые скрипты Python"
+  },
+  {
+    "title": "Домашняя работа №2",
+    "deadline": "2026-07-20",
+    "module": "module_02",
+    "description": "REST API на FastAPI с CRUD-операциями"
+  },
+  {
+    "title": "Итоговый проект",
+    "deadline": "2026-08-01",
+    "module": "module_03",
+    "description": "RAG-ассистент по материалам курса"
+  }
+]

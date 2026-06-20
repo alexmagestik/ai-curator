@@ -1,0 +1,20 @@
+[
+  {
+    "module": "Python Backend",
+    "lesson_date": "2026-07-01",
+    "topic": "Введение в REST API",
+    "format": "lecture"
+  },
+  {
+    "module": "Python Backend",
+    "lesson_date": "2026-07-08",
+    "topic": "Базы данных и SQLAlchemy",
+    "format": "lecture"
+  },
+  {
+    "module": "Python Backend",
+    "lesson_date": "2026-07-15",
+    "topic": "RAG и LLM в образовании",
+    "format": "workshop"
+  }
+]

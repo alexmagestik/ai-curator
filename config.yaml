@@ -1,0 +1,29 @@
+knowledge_base:
+  path: ./knowledge_base
+  supported_extensions:
+    - .odt
+
+indexing:
+  chunk_size: 1200
+  chunk_overlap: 200
+  collection_name: course_knowledge
+
+vector_store:
+  path: ./vector_store
+
+embeddings:
+  provider: openai
+  model: text-embedding-3-small
+
+retrieval:
+  top_k: 5
+  bm25_weight: 0.5
+  vector_weight: 0.5
+
+database:
+  path: ./data/app.db
+  max_history_messages: 10
+
+lms:
+  api_url: http://127.0.0.1:8000
+  data_path: ./data

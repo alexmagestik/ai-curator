@@ -1,0 +1,33 @@
+services:
+  lms-api:
+    build: .
+    command: python scripts/run_lms_api.py
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  streamlit:
+    build: .
+    command: >
+      streamlit run streamlit_app.py
+      --server.address=0.0.0.0
+      --server.port=8501
+      --browser.gatherUsageStats=false
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    environment:
+      LMS_API_URL: http://lms-api:8000
+    depends_on:
+      - lms-api
+    volumes:
+      - ./data:/app/data
+      - ./knowledge_base:/app/knowledge_base
+      - ./vector_store:/app/vector_store
+      - ./logs:/app/logs
+    restart: unless-stopped

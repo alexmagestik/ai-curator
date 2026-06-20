@@ -1,0 +1,7 @@
+{
+  "course": "Python Backend",
+  "description": "Курс по серверной разработке на Python: API, базы данных, RAG.",
+  "duration_weeks": 12,
+  "instructor": "Куратор платформы",
+  "support_email": "support@example.com"
+}

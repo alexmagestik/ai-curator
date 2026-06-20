@@ -1,0 +1,26 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.env
+.env.*
+!.env.example
+
+# Runtime / generated (recreate after clone)
+vector_store/
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+logs/
+
+# IDE & OS
+.idea/
+*.swp
+.DS_Store
+
+# Optional local exports from analytics UI
+exports/
+*.csv
+!tests/**/*.csv

@@ -81,8 +81,8 @@
 **Требования:** Python 3.12+, ключ [OpenAI API](https://platform.openai.com/api-keys), Docker (опционально).
 
 ```bash
-git clone https://github.com/<username>/<repo>.git
-cd <repo>
+git clone https://github.com/alexmagestik/ai-curator.git
+cd ai-curator
 ```
 
 После клонирования выполните шаги из раздела [Быстрый старт](#быстрый-старт). В репозитории уже есть база знаний (`knowledge_base/`) и шаблоны LMS (`data/*.json`). Файлы `.env`, `data/app.db` и `vector_store/` создаются локально и в git не попадают.

@@ -169,12 +169,14 @@ streamlit run streamlit_app.py
 - «Когда следующее занятие?»
 - «Какие задания мне нужно выполнить?»
 
+**Демо для заказчика:** пошаговые сценарии с ожидаемым поведением — [docs/use_cases.md](docs/use_cases.md).
+
 ---
 
 ## Структура проекта
 
 ```text
-ai-curator/
+PEcf13/
 ├── app/
 │   ├── analytics/      # логи, метрики, CSV-экспорт
 │   ├── auth/           # регистрация, вход, роли
@@ -222,6 +224,7 @@ ai-curator/
 | [docs/knowledge_base.md](docs/knowledge_base.md) | Добавление материалов |
 | [docs/reindexing.md](docs/reindexing.md) | Переиндексация |
 | [docs/user_guide.md](docs/user_guide.md) | Руководство пользователя |
+| [docs/use_cases.md](docs/use_cases.md) | Демо-сценарии для заказчика |
 
 ---
 

@@ -14,6 +14,7 @@ from app.services.level_detector import (
     classify_intent,
     update_user_level,
 )
+from app.ui.response_status import ResponseStatus, build_response_status
 from app.utils.config import Settings, get_settings
 
 
@@ -34,6 +35,7 @@ class ChatTurnResult:
     answer_found: bool
     module: str | None
     rag_response: RAGResponse | None = None
+    status: ResponseStatus | None = None
 
 
 class ChatService:
@@ -161,6 +163,14 @@ class ChatService:
         detection = self.level_detector.detect(question, history)
         user_profile = update_user_level(self.users, user_id, detection)
 
+        status = build_response_status(
+            question=question,
+            answer_found=metrics.answer_found,
+            response_type=response_type,
+            sources_count=metrics.sources_count,
+            question_category=metrics.question_category,
+        )
+
         return ChatTurnResult(
             answer=answer,
             response_type=response_type,
@@ -177,6 +187,7 @@ class ChatService:
             answer_found=metrics.answer_found,
             module=metrics.module,
             rag_response=rag_response,
+            status=status,
         )
 
     def list_sessions(self, user_id: int) -> list[ChatSession]:

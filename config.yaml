@@ -1,7 +1,10 @@
 knowledge_base:
   path: ./knowledge_base
+  md_path: ./knowledge_base_md
+  markdown_extension: .md
   supported_extensions:
     - .odt
+    - .pdf
 
 indexing:
   chunk_size: 1200

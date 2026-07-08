@@ -7,6 +7,8 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 
+from app.conversion.pipeline import ConversionResult, convert_knowledge_base
+from app.conversion.validator import ValidationReport, validate_markdown_tree
 from app.loaders.registry import scan_knowledge_base
 from app.rag.chunker import split_documents
 from app.utils.config import Settings, get_settings
@@ -18,6 +20,30 @@ class IndexResult:
     chunks_indexed: int
     collection_name: str
     vector_db_path: str
+    files_converted: int = 0
+    conversion_errors: int = 0
+    validation_warnings: int = 0
+    validation_failures: int = 0
+
+
+def prepare_markdown(
+    settings: Settings,
+    force: bool = False,
+) -> tuple[ConversionResult, ValidationReport]:
+    """Convert sources to Markdown, then validate the Markdown tree.
+
+    This is the first stage of indexing: ODT/PDF sources in
+    ``knowledge_base/`` are converted into ``knowledge_base_md/`` and the
+    resulting Markdown is validated before anything is added to ChromaDB.
+    """
+    conversion = convert_knowledge_base(
+        settings.knowledge_base_path,
+        settings.knowledge_base_md_path,
+        settings.supported_extensions,
+        force=force,
+    )
+    report = validate_markdown_tree(settings.knowledge_base_md_path)
+    return conversion, report
 
 
 def _get_embeddings(settings: Settings) -> OpenAIEmbeddings:
@@ -51,11 +77,12 @@ def load_index(settings: Settings | None = None) -> Chroma:
 
 
 def build_index(settings: Settings | None = None) -> IndexResult:
-    """Index new or changed documents into ChromaDB."""
+    """Convert sources to Markdown, validate, then index new/changed chunks."""
     settings = settings or get_settings()
+    conversion, report = prepare_markdown(settings)
     loaded_documents = scan_knowledge_base(
-        settings.knowledge_base_path,
-        settings.supported_extensions,
+        settings.knowledge_base_md_path,
+        (settings.markdown_extension,),
     )
     chunks = split_documents(loaded_documents, settings)
 
@@ -80,18 +107,24 @@ def build_index(settings: Settings | None = None) -> IndexResult:
         chunks_indexed=len(docs_to_add),
         collection_name=settings.collection_name,
         vector_db_path=str(settings.vector_db_path),
+        files_converted=conversion.converted_count,
+        conversion_errors=conversion.error_count,
+        validation_warnings=report.warn_count,
+        validation_failures=report.fail_count,
     )
 
 
 def rebuild_index(settings: Settings | None = None) -> IndexResult:
-    """Remove existing vector store and rebuild from scratch."""
+    """Reconvert every source, validate, drop the vector store and rebuild."""
     settings = settings or get_settings()
+    conversion, report = prepare_markdown(settings, force=True)
+
     if settings.vector_db_path.exists():
         shutil.rmtree(settings.vector_db_path)
 
     loaded_documents = scan_knowledge_base(
-        settings.knowledge_base_path,
-        settings.supported_extensions,
+        settings.knowledge_base_md_path,
+        (settings.markdown_extension,),
     )
     chunks = split_documents(loaded_documents, settings)
     vector_store = load_index(settings)
@@ -105,4 +138,8 @@ def rebuild_index(settings: Settings | None = None) -> IndexResult:
         chunks_indexed=len(chunks),
         collection_name=settings.collection_name,
         vector_db_path=str(settings.vector_db_path),
+        files_converted=conversion.converted_count,
+        conversion_errors=conversion.error_count,
+        validation_warnings=report.warn_count,
+        validation_failures=report.fail_count,
     )

@@ -13,11 +13,15 @@ from app.rag.indexer import rebuild_index  # noqa: E402
 
 def main() -> int:
     result = rebuild_index()
-    print("Rebuild completed.")
-    print(f"  Source files scanned: {result.source_files}")
-    print(f"  Total chunks indexed: {result.chunks_indexed}")
-    print(f"  Collection:           {result.collection_name}")
-    print(f"  Vector store path:    {result.vector_db_path}")
+    print("Rebuild completed (reconvert -> validate -> reindex).")
+    print(f"  Files converted to MD:  {result.files_converted}")
+    print(f"  Conversion errors:      {result.conversion_errors}")
+    print(f"  Validation warnings:    {result.validation_warnings}")
+    print(f"  Validation failures:    {result.validation_failures}")
+    print(f"  MD files scanned:       {result.source_files}")
+    print(f"  Total chunks indexed:   {result.chunks_indexed}")
+    print(f"  Collection:             {result.collection_name}")
+    print(f"  Vector store path:      {result.vector_db_path}")
     return 0
 
 

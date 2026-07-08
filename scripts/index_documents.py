@@ -13,9 +13,13 @@ from app.rag.indexer import build_index  # noqa: E402
 
 def main() -> int:
     result = build_index()
-    print("Indexing completed.")
-    print(f"  Source files scanned: {result.source_files}")
-    print(f"  New chunks indexed:   {result.chunks_indexed}")
+    print("Indexing completed (convert -> validate -> index).")
+    print(f"  Files converted to MD:  {result.files_converted}")
+    print(f"  Conversion errors:      {result.conversion_errors}")
+    print(f"  Validation warnings:    {result.validation_warnings}")
+    print(f"  Validation failures:    {result.validation_failures}")
+    print(f"  MD files scanned:       {result.source_files}")
+    print(f"  New chunks indexed:     {result.chunks_indexed}")
     print(f"  Collection:             {result.collection_name}")
     print(f"  Vector store path:      {result.vector_db_path}")
     return 0

@@ -15,6 +15,10 @@ data/*.sqlite
 data/*.sqlite3
 logs/
 
+# Knowledge base: sources and converted Markdown must not reach the public repo
+knowledge_base/
+knowledge_base_md/
+
 # IDE & OS
 .idea/
 *.swp

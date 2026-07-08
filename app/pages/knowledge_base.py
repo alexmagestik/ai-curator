@@ -12,10 +12,10 @@ from app.rag.indexer import build_index, rebuild_index
 from app.utils.config import get_settings
 
 
-def _scan_modules(knowledge_base_path: Path) -> dict[str, list[str]]:
+def _scan_modules(md_path: Path) -> dict[str, list[str]]:
     documents = scan_knowledge_base(
-        knowledge_base_path,
-        get_settings().supported_extensions,
+        md_path,
+        (get_settings().markdown_extension,),
     )
     modules: dict[str, list[str]] = {}
     for doc in documents:
@@ -32,11 +32,17 @@ def render_knowledge_base_page() -> None:
 
     settings = get_settings()
     st.title("База знаний")
-    st.caption("Список документов, статистика по модулям и переиндексация.")
+    st.caption(
+        "Конвертированные Markdown-документы (knowledge_base_md/), "
+        "статистика по модулям и переиндексация."
+    )
 
-    modules = _scan_modules(settings.knowledge_base_path)
+    modules = _scan_modules(settings.knowledge_base_md_path)
     if not modules:
-        st.warning("Документы не найдены в `knowledge_base/`.")
+        st.warning(
+            "Markdown-документы не найдены в `knowledge_base_md/`. "
+            "Запустите индексацию, чтобы сконвертировать исходники."
+        )
     else:
         total_docs = sum(len(files) for files in modules.values())
         st.metric("Всего документов", total_docs)

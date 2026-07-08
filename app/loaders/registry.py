@@ -3,10 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.loaders.base import BaseDocumentLoader, LoadedDocument
+from app.loaders.md_loader import MarkdownLoader
 from app.loaders.odt_loader import ODTLoader
 
 LOADERS: dict[str, BaseDocumentLoader] = {
     ODTLoader.extension: ODTLoader(),
+    MarkdownLoader.extension: MarkdownLoader(),
 }
 
 

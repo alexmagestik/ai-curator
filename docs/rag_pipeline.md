@@ -3,10 +3,22 @@
 ## Схема
 
 ```text
-ODT-файлы (knowledge_base/module_XX/)
+Исходники (knowledge_base/<Модуль>/*.odt, *.pdf)
         │
         ▼
-   ODTLoader ──▶ clean text + metadata
+  Конвертация в Markdown (стандартная библиотека Python)
+  ODT → app/conversion/odt_to_md.py
+  PDF → app/conversion/pdf_to_md.py
+        │
+        ▼
+  knowledge_base_md/<Модуль>/*.md  (зеркало структуры, сохраняется на диск)
+        │
+        ▼
+  Валидация Markdown (app/conversion/validator.py)
+  структура, таблицы, списки, артефакты парсинга
+        │
+        ▼
+   MarkdownLoader ──▶ clean text + metadata
         │
         ▼
  RecursiveCharacterTextSplitter
@@ -40,12 +52,29 @@ ODT-файлы (knowledge_base/module_XX/)
 
 ## Индексация
 
+Индексация выполняется в три шага: **конвертация → валидация → загрузка в ChromaDB**.
+Оба скрипта ниже вызывают этот конвейер целиком.
+
 ```bash
-python scripts/index_documents.py   # инкрементально
-python scripts/rebuild_index.py     # с нуля
+python scripts/index_documents.py   # конвертация изменённых + инкрементальная индексация
+python scripts/rebuild_index.py     # переконвертация всего + индексация с нуля
 ```
 
-Параметры: `.env` (`CHUNK_SIZE`, `CHUNK_OVERLAP`) или `config.yaml`.
+Можно запускать шаги по отдельности:
+
+```bash
+python scripts/convert_to_md.py     # только конвертация ODT/PDF → knowledge_base_md/
+python scripts/validate_md.py       # только валидация knowledge_base_md/
+```
+
+Параметры: `.env` (`CHUNK_SIZE`, `CHUNK_OVERLAP`, `KNOWLEDGE_BASE_MD_PATH`) или `config.yaml`.
+
+## Конвертация и валидация
+
+- **Конвертация** идёт зеркально: `knowledge_base/<Модуль>/файл.odt` → `knowledge_base_md/<Модуль>/файл.md`. Используется только стандартная библиотека Python (без `pandoc`/`libreoffice`), новых зависимостей не добавляется.
+- Конвертация **инкрементальна**: файл пропускается, если его `.md` новее исходника (`rebuild_index` конвертирует принудительно).
+- **Очистка PDF** (`app/conversion/pdf_to_md.py`): удаляются колонтитулы (повторяющиеся строки, в т.ч. с меняющимся номером страницы — сравнение по ключу с «обнулёнными» цифрами), номера страниц и футеры (`5`, `- 5 -`, `Стр. 5`, `Страница 5 из 10`, `Page 3 of 20`, `5/10`), служебные строки (`©`, `All rights reserved`), а также дубли соседних строк на стыках страниц. Маркеры вида `<!-- page N -->` больше не добавляются. Для точечных «устаревших»/служебных строк можно расширить список `EXTRA_DROP_PATTERNS`.
+- **Валидация** (`validate_markdown_tree`) проверяет структуру: пустой вывод (R1), сломанные таблицы (R3), неразобранные CID-глифы PDF (R5), заголовки, списки. Пустые файлы отсеиваются на этапе чанкинга и не попадают в индекс.
 
 ## Hybrid Search
 
@@ -65,7 +94,7 @@ python scripts/rebuild_index.py     # с нуля
 ```json
 {
   "module": "module_01",
-  "file_name": "lecture_01.odt",
+  "file_name": "lecture_01.md",
   "resource_type": "lecture",
   "topic": "lecture_01",
   "source_path": "...",

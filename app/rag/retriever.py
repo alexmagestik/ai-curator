@@ -124,12 +124,21 @@ class HybridRetriever:
         top_k = top_k or self.settings.top_k
         fetch_k = top_k * 2
 
+        # Empty index: ChromaDB has no HNSW segment on disk until the first
+        # document is added, and querying it raises an InternalError.
+        if not self._all_documents:
+            return []
+
         chroma_filter = _build_chroma_filter(filters)
         search_kwargs: dict = {"k": fetch_k}
         if chroma_filter:
             search_kwargs["filter"] = chroma_filter
 
-        vector_docs = self._vector_store.similarity_search(query, **search_kwargs)
+        try:
+            vector_docs = self._vector_store.similarity_search(query, **search_kwargs)
+        except Exception:
+            # Vector segment missing/corrupt — fall back to BM25 over the corpus.
+            vector_docs = []
 
         corpus = [
             doc for doc in self._all_documents if _matches_filters(doc, filters)

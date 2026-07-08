@@ -35,7 +35,8 @@
 - **Адаптация сложности** по уровню студента (автоопределение + промпт)
 
 ### RAG и база знаний
-- Индексация **ODT**-материалов (лекции, FAQ) в **ChromaDB**
+- Схема загрузки **конвертация → валидация → индексация**: исходники **ODT/PDF** сначала конвертируются в **Markdown** (`knowledge_base_md/`), сохраняются на диск, проходят проверку структуры и только затем попадают в **ChromaDB**
+- Конвертеры на **стандартной библиотеке Python** (без `pandoc`/`libreoffice`) — [`app/conversion/`](app/conversion/)
 - **Гибридный поиск**: BM25 + vector search, top-k=5
 - Фильтрация по метаданным: `module`, `topic`, `resource_type`, `file_name`
 - Опциональный reranker (`USE_RERANKER=true`)
@@ -71,7 +72,7 @@
 | UI | Streamlit |
 | LMS-заглушка | FastAPI |
 | Аналитика | Pandas, Plotly |
-| Документы | odfpy (ODT) |
+| Конвертация документов | ODT/PDF → Markdown, стандартная библиотека Python |
 | Деплой | Docker Compose |
 
 ---
@@ -85,7 +86,7 @@ git clone https://github.com/alexmagestik/ai-curator.git
 cd ai-curator
 ```
 
-После клонирования выполните шаги из раздела [Быстрый старт](#быстрый-старт). В репозитории уже есть база знаний (`knowledge_base/`) и шаблоны LMS (`data/*.json`). Файлы `.env`, `data/app.db` и `vector_store/` создаются локально и в git не попадают.
+После клонирования выполните шаги из раздела [Быстрый старт](#быстрый-старт). Шаблоны LMS (`data/*.json`) есть в репозитории. Материалы базы знаний (`knowledge_base/`), их Markdown-версии (`knowledge_base_md/`), файлы `.env`, `data/app.db` и `vector_store/` в git **не хранятся** — положите свои документы в `knowledge_base/<Модуль>/` или сгенерируйте демо-материалы (см. ниже).
 
 ---
 
@@ -101,8 +102,12 @@ pip install -r requirements.txt
 cp .env.example .env               # укажите OPENAI_API_KEY
 python scripts/init_db.py          # SQLite + опционально admin
 python scripts/create_sample_knowledge_base.py   # демо-материалы (опционально)
-python scripts/index_documents.py  # индексация в ChromaDB
+python scripts/index_documents.py  # конвертация ODT/PDF → MD → валидация → ChromaDB
 ```
+
+> `index_documents.py` сам конвертирует исходники из `knowledge_base/` в Markdown
+> (`knowledge_base_md/`), проверяет результат и индексирует. Отдельно доступны
+> `scripts/convert_to_md.py` (только конвертация) и `scripts/validate_md.py` (только проверка).
 
 ### 2a. Docker (рекомендуется)
 
@@ -134,7 +139,8 @@ streamlit run streamlit_app.py
 | `OPENAI_API_KEY` | Ключ OpenAI | — |
 | `OPENAI_MODEL` | Модель чата | `gpt-4o-mini` |
 | `VECTOR_DB_PATH` | ChromaDB | `./vector_store` |
-| `KNOWLEDGE_BASE_PATH` | ODT-материалы | `./knowledge_base` |
+| `KNOWLEDGE_BASE_PATH` | Исходники (ODT/PDF) | `./knowledge_base` |
+| `KNOWLEDGE_BASE_MD_PATH` | Конвертированный Markdown | `./knowledge_base_md` |
 | `DATABASE_PATH` | SQLite | `./data/app.db` |
 | `TOP_K` | Документов в retrieval | `5` |
 | `MAX_HISTORY_MESSAGES` | Сообщений в контексте LLM | `10` |
@@ -180,8 +186,9 @@ PEcf13/
 ├── app/
 │   ├── analytics/      # логи, метрики, CSV-экспорт
 │   ├── auth/           # регистрация, вход, роли
+│   ├── conversion/     # ODT/PDF → MD конвертеры + валидатор
 │   ├── database/       # SQLite repositories
-│   ├── loaders/        # ODT-загрузчик
+│   ├── loaders/        # MarkdownLoader, ODTLoader
 │   ├── lms/            # Mock API + handler
 │   ├── pages/          # Streamlit-страницы
 │   ├── prompts/        # system prompt, few-shot
@@ -189,7 +196,8 @@ PEcf13/
 │   └── services/       # ChatService, LevelDetector
 ├── data/               # SQLite, LMS JSON
 ├── docs/               # документация
-├── knowledge_base/     # ODT по модулям
+├── knowledge_base/     # исходники (ODT/PDF) по модулям (не в git)
+├── knowledge_base_md/  # конвертированный Markdown (не в git)
 ├── scripts/            # CLI-утилиты
 ├── vector_store/       # ChromaDB
 ├── docker-compose.yml
@@ -203,8 +211,10 @@ PEcf13/
 | Команда | Назначение |
 |---|---|
 | `python scripts/init_db.py` | Инициализация SQLite |
-| `python scripts/index_documents.py` | Инкрементальная индексация |
-| `python scripts/rebuild_index.py` | Полная переиндексация |
+| `python scripts/convert_to_md.py` | Конвертация ODT/PDF → Markdown |
+| `python scripts/validate_md.py` | Валидация конвертированного Markdown |
+| `python scripts/index_documents.py` | Конвертация + валидация + инкрементальная индексация |
+| `python scripts/rebuild_index.py` | Переконвертация + полная переиндексация |
 | `python scripts/run_lms_api.py` | Запуск LMS Mock API |
 | `python scripts/create_sample_knowledge_base.py` | Демо-ODT |
 

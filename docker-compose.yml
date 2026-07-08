@@ -28,6 +28,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./knowledge_base:/app/knowledge_base
+      - ./knowledge_base_md:/app/knowledge_base_md
       - ./vector_store:/app/vector_store
       - ./logs:/app/logs
     restart: unless-stopped

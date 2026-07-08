@@ -19,12 +19,14 @@ class Settings:
     llm_provider: str
     vector_db_path: Path
     knowledge_base_path: Path
+    knowledge_base_md_path: Path
     chunk_size: int
     chunk_overlap: int
     use_reranker: bool
     collection_name: str
     embedding_model: str
     supported_extensions: tuple[str, ...]
+    markdown_extension: str
     top_k: int
     bm25_weight: float
     vector_weight: float
@@ -64,13 +66,20 @@ def get_settings(config_path: Path | None = None) -> Settings:
     knowledge_base_path = _resolve_path(
         os.getenv("KNOWLEDGE_BASE_PATH", kb_config.get("path", "./knowledge_base"))
     )
+    knowledge_base_md_path = _resolve_path(
+        os.getenv(
+            "KNOWLEDGE_BASE_MD_PATH",
+            kb_config.get("md_path", "./knowledge_base_md"),
+        )
+    )
     vector_db_path = _resolve_path(
         os.getenv("VECTOR_DB_PATH", vector_config.get("path", "./vector_store"))
     )
 
     supported_extensions = tuple(
-        kb_config.get("supported_extensions", [".odt"])
+        kb_config.get("supported_extensions", [".odt", ".pdf"])
     )
+    markdown_extension = kb_config.get("markdown_extension", ".md")
 
     return Settings(
         openai_api_key=os.getenv("OPENAI_API_KEY", ""),
@@ -78,6 +87,7 @@ def get_settings(config_path: Path | None = None) -> Settings:
         llm_provider=os.getenv("LLM_PROVIDER", "openai"),
         vector_db_path=vector_db_path,
         knowledge_base_path=knowledge_base_path,
+        knowledge_base_md_path=knowledge_base_md_path,
         chunk_size=int(os.getenv("CHUNK_SIZE", indexing_config.get("chunk_size", 1200))),
         chunk_overlap=int(
             os.getenv("CHUNK_OVERLAP", indexing_config.get("chunk_overlap", 200))
@@ -86,6 +96,7 @@ def get_settings(config_path: Path | None = None) -> Settings:
         collection_name=indexing_config.get("collection_name", "course_knowledge"),
         embedding_model=embeddings_config.get("model", "text-embedding-3-small"),
         supported_extensions=supported_extensions,
+        markdown_extension=markdown_extension,
         top_k=int(os.getenv("TOP_K", retrieval_config.get("top_k", 5))),
         bm25_weight=float(
             os.getenv("BM25_WEIGHT", retrieval_config.get("bm25_weight", 0.5))

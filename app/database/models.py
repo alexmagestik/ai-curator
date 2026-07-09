@@ -17,6 +17,17 @@ class User:
 
 
 @dataclass(frozen=True)
+class UserSummary:
+    id: int
+    email: str
+    role: str
+    created_at: str
+    current_level: str
+    session_count: int
+    last_activity: str | None
+
+
+@dataclass(frozen=True)
 class UserProfile:
     user_id: int
     current_level: str

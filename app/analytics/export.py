@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import csv
 import io
-from datetime import datetime
+from datetime import date, datetime
 
 from app.analytics.metrics import AnalyticsService
 from app.analytics.repository import QueryLogRepository
 
 
-def export_query_logs_csv(repository: QueryLogRepository | None = None) -> str:
+def export_query_logs_csv(
+    repository: QueryLogRepository | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> str:
     repository = repository or QueryLogRepository()
-    logs = repository.fetch_all_for_export()
+    logs = repository.fetch_all_for_export(start_date, end_date)
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)
@@ -50,9 +54,13 @@ def export_query_logs_csv(repository: QueryLogRepository | None = None) -> str:
     return buffer.getvalue()
 
 
-def export_daily_stats_csv(service: AnalyticsService | None = None) -> str:
+def export_daily_stats_csv(
+    service: AnalyticsService | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> str:
     service = service or AnalyticsService()
-    rows = service.daily_report()
+    rows = service.daily_report(start_date, end_date)
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)
@@ -69,9 +77,13 @@ def export_daily_stats_csv(service: AnalyticsService | None = None) -> str:
     return buffer.getvalue()
 
 
-def export_user_stats_csv(service: AnalyticsService | None = None) -> str:
+def export_user_stats_csv(
+    service: AnalyticsService | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> str:
     service = service or AnalyticsService()
-    rows = service.user_statistics()
+    rows = service.user_statistics(start_date, end_date)
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)

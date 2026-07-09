@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.database.db import get_connection, init_db
-from app.database.models import ChatSession, Message, User, UserProfile, utc_now_iso
+from app.database.models import ChatSession, Message, User, UserProfile, UserSummary, utc_now_iso
 from app.utils.config import Settings, get_settings
 
 VALID_ROLES = ("user", "admin")
@@ -120,6 +120,79 @@ class UserRepository:
         if profile is None:
             raise ValueError(f"Profile not found for user {user_id}")
         return profile
+
+    def list_users_with_stats(self) -> list[UserSummary]:
+        with get_connection(self.settings) as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    u.id,
+                    u.email,
+                    u.role,
+                    u.created_at,
+                    COALESCE(p.current_level, 'intermediate') AS current_level,
+                    COUNT(DISTINCT s.id) AS session_count,
+                    MAX(m.created_at) AS last_activity
+                FROM users u
+                LEFT JOIN user_profiles p ON p.user_id = u.id
+                LEFT JOIN chat_sessions s ON s.user_id = u.id
+                LEFT JOIN messages m ON m.session_id = s.id
+                GROUP BY u.id, u.email, u.role, u.created_at, p.current_level
+                ORDER BY u.created_at DESC
+                """
+            ).fetchall()
+        return [
+            UserSummary(
+                id=row["id"],
+                email=row["email"],
+                role=row["role"],
+                created_at=row["created_at"],
+                current_level=row["current_level"],
+                session_count=int(row["session_count"]),
+                last_activity=row["last_activity"],
+            )
+            for row in rows
+        ]
+
+    def count_admins(self) -> int:
+        with get_connection(self.settings) as connection:
+            row = connection.execute(
+                "SELECT COUNT(*) AS cnt FROM users WHERE role = 'admin'"
+            ).fetchone()
+        return int(row["cnt"]) if row else 0
+
+    def update_password(self, user_id: int, password_hash: str) -> None:
+        with get_connection(self.settings) as connection:
+            cursor = connection.execute(
+                "UPDATE users SET password_hash = ? WHERE id = ?",
+                (password_hash, user_id),
+            )
+            if cursor.rowcount == 0:
+                raise ValueError(f"User not found: {user_id}")
+            connection.commit()
+
+    def update_role(self, user_id: int, role: str) -> User:
+        if role not in VALID_ROLES:
+            raise ValueError(f"Invalid role: {role}")
+        with get_connection(self.settings) as connection:
+            cursor = connection.execute(
+                "UPDATE users SET role = ? WHERE id = ?",
+                (role, user_id),
+            )
+            if cursor.rowcount == 0:
+                raise ValueError(f"User not found: {user_id}")
+            connection.commit()
+        user = self.get_by_id(user_id)
+        if user is None:
+            raise ValueError(f"User not found: {user_id}")
+        return user
+
+    def delete_user(self, user_id: int) -> None:
+        with get_connection(self.settings) as connection:
+            cursor = connection.execute("DELETE FROM users WHERE id = ?", (user_id,))
+            if cursor.rowcount == 0:
+                raise ValueError(f"User not found: {user_id}")
+            connection.commit()
 
 
 class ChatRepository:

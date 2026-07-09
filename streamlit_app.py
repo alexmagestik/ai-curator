@@ -8,6 +8,7 @@ from app.pages.chat import render_chat_page
 from app.pages.dialogs import render_dialogs_page
 from app.pages.knowledge_base import render_knowledge_base_page
 from app.pages.rag_debug import render_rag_debug_page
+from app.pages.users import render_users_page
 
 st.set_page_config(page_title="AI Tutor", page_icon="🎓", layout="wide")
 
@@ -18,7 +19,7 @@ if not is_authenticated():
     st.stop()
 
 USER_PAGES = ["Чат", "Мои диалоги"]
-ADMIN_PAGES = ["База знаний", "RAG Debug", "Аналитика"]
+ADMIN_PAGES = ["База знаний", "RAG Debug", "Аналитика", "Пользователи"]
 
 if "active_page" not in st.session_state:
     st.session_state.active_page = "Чат"
@@ -53,3 +54,5 @@ elif page == "RAG Debug":
     render_rag_debug_page()
 elif page == "Аналитика":
     render_analytics_page()
+elif page == "Пользователи":
+    render_users_page()

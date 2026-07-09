@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.analytics.date_range import build_date_filter
 from app.analytics.models import QueryLog
 from app.database.db import get_connection
 from app.database.models import utc_now_iso
@@ -53,29 +54,43 @@ class QueryLogRepository:
             connection.commit()
             return int(cursor.lastrowid)
 
-    def list_logs(self, limit: int = 100) -> list[QueryLog]:
+    def list_logs(
+        self,
+        limit: int = 100,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> list[QueryLog]:
+        date_filter, date_params = build_date_filter(start_date, end_date, column="l.timestamp")
         with get_connection(self.settings) as connection:
             rows = connection.execute(
-                """
+                f"""
                 SELECT l.*, u.email AS user_email
                 FROM query_logs l
                 JOIN users u ON u.id = l.user_id
+                WHERE {date_filter}
                 ORDER BY l.timestamp DESC
                 LIMIT ?
                 """,
-                (limit,),
+                [*date_params, limit],
             ).fetchall()
         return [self._row_to_log(row) for row in rows]
 
-    def fetch_all_for_export(self) -> list[QueryLog]:
+    def fetch_all_for_export(
+        self,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> list[QueryLog]:
+        date_filter, date_params = build_date_filter(start_date, end_date, column="l.timestamp")
         with get_connection(self.settings) as connection:
             rows = connection.execute(
-                """
+                f"""
                 SELECT l.*, u.email AS user_email
                 FROM query_logs l
                 JOIN users u ON u.id = l.user_id
+                WHERE {date_filter}
                 ORDER BY l.timestamp ASC
-                """
+                """,
+                date_params,
             ).fetchall()
         return [self._row_to_log(row) for row in rows]
 

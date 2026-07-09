@@ -50,12 +50,18 @@ class ChatService:
         settings: Settings | None = None,
     ) -> None:
         self.settings = settings or get_settings()
-        self.pipeline = pipeline or RAGPipeline(self.settings)
+        self._pipeline = pipeline
         self.chats = chat_repository or ChatRepository(self.settings)
         self.users = user_repository or UserRepository(self.settings)
         self.level_detector = level_detector or LevelDetector(self.settings)
         self.lms_handler = lms_handler or LMSHandler(self.settings)
         self.request_logger = request_logger or RequestLogger()
+
+    @property
+    def pipeline(self) -> RAGPipeline:
+        if self._pipeline is None:
+            self._pipeline = RAGPipeline(self.settings)
+        return self._pipeline
 
     def get_or_create_session(
         self,

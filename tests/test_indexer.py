@@ -5,7 +5,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.rag.indexer import IndexResult, build_index, rebuild_index, reset_vector_store
+from app.rag.indexer import (
+    IndexResult,
+    build_index,
+    clear_vector_collection,
+    rebuild_index,
+    reset_vector_store,
+)
 from app.utils.config import Settings
 
 
@@ -56,9 +62,6 @@ def test_build_index_skips_existing_chunks(settings: Settings) -> None:
 
 
 def test_rebuild_index_clears_store_and_indexes(settings: Settings) -> None:
-    settings.vector_db_path.mkdir(parents=True)
-    (settings.vector_db_path / "old.txt").write_text("old", encoding="utf-8")
-
     mock_store = MagicMock()
     chunk = MagicMock()
     chunk.metadata = {
@@ -70,19 +73,32 @@ def test_rebuild_index_clears_store_and_indexes(settings: Settings) -> None:
     with (
         patch("app.rag.indexer.scan_knowledge_base", return_value=[]),
         patch("app.rag.indexer.split_documents", return_value=[chunk]),
+        patch("app.rag.indexer.clear_vector_collection") as mock_clear,
         patch("app.rag.indexer.load_index", return_value=mock_store),
     ):
         result = rebuild_index(settings)
 
-    assert not (settings.vector_db_path / "old.txt").exists()
+    mock_clear.assert_called_once_with(settings)
     assert result.chunks_indexed == 1
     mock_store.add_documents.assert_called_once()
 
 
-def test_reset_vector_store_removes_existing_files(settings: Settings) -> None:
+def test_clear_vector_collection_keeps_persist_directory(settings: Settings) -> None:
     settings.vector_db_path.mkdir(parents=True)
     (settings.vector_db_path / "chroma.sqlite3").write_text("db", encoding="utf-8")
 
-    reset_vector_store(settings)
+    mock_client = MagicMock()
+    with (
+        patch("app.rag.indexer.load_index", side_effect=RuntimeError("no collection")),
+        patch("app.rag.indexer.chromadb.PersistentClient", return_value=mock_client),
+    ):
+        clear_vector_collection(settings)
 
-    assert not settings.vector_db_path.exists()
+    assert settings.vector_db_path.exists()
+    mock_client.delete_collection.assert_called_once_with("test_collection")
+
+
+def test_reset_vector_store_delegates_to_clear(settings: Settings) -> None:
+    with patch("app.rag.indexer.clear_vector_collection") as mock_clear:
+        reset_vector_store(settings)
+    mock_clear.assert_called_once_with(settings)

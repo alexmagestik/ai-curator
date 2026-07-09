@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import gc
 import shutil
-import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -70,29 +69,43 @@ def _chunk_id(document: Document) -> str:
     )
 
 
+def _cleanup_stale_vector_dirs(path: Path) -> None:
+    parent = path.parent
+    for stale_dir in parent.glob(f"{path.name}.stale.*"):
+        if stale_dir.is_dir():
+            shutil.rmtree(stale_dir, ignore_errors=True)
+
+
 def _ensure_vector_db_writable(path: Path) -> None:
+    _cleanup_stale_vector_dirs(path)
     path.mkdir(parents=True, exist_ok=True)
     try:
         path.chmod(0o777)
+        for item in path.rglob("*"):
+            try:
+                item.chmod(0o777)
+            except OSError:
+                pass
     except OSError:
         pass
 
 
 def close_vector_store(vector_store: Chroma | None) -> None:
-    """Release Chroma file handles so the persist directory can be updated."""
+    """Release Chroma handles without calling client.reset().
+
+    reset() can leave the SQLite catalog read-only for the next connection,
+    which breaks Streamlit pages that reopen the store after reindexing.
+    """
     if vector_store is None:
         return
     try:
-        client = getattr(vector_store, "_client", None)
-        if client is not None:
-            reset = getattr(client, "reset", None)
-            if callable(reset):
-                reset()
+        if hasattr(vector_store, "_collection"):
+            vector_store._collection = None
+        if hasattr(vector_store, "_client"):
+            vector_store._client = None
     except Exception:
         pass
-    finally:
-        del vector_store
-        gc.collect()
+    gc.collect()
 
 
 def _delete_chroma_collection(settings: Settings) -> None:
@@ -110,36 +123,41 @@ def _delete_chroma_collection(settings: Settings) -> None:
         gc.collect()
 
 
-def reset_vector_store(settings: Settings) -> None:
-    """Drop persisted vectors, tolerating open handles from cached Streamlit resources."""
-    _delete_chroma_collection(settings)
-    path = settings.vector_db_path
-    if not path.exists():
-        return
+def clear_vector_collection(settings: Settings) -> None:
+    """Drop all indexed chunks while keeping the Chroma persist directory."""
+    _ensure_vector_db_writable(settings.vector_db_path)
 
-    gc.collect()
-    time.sleep(0.1)
-
+    vector_store: Chroma | None = None
     try:
-        shutil.rmtree(path)
-        return
-    except OSError:
-        stale = path.with_name(f"{path.name}.stale.{int(time.time())}")
-        try:
-            path.rename(stale)
-        except OSError:
-            return
-        shutil.rmtree(stale, ignore_errors=True)
+        vector_store = load_index(settings)
+        existing_ids = vector_store.get().get("ids") or []
+        if existing_ids:
+            vector_store.delete(existing_ids)
+    except Exception:
+        vector_store = None
+
+    if vector_store is not None:
+        close_vector_store(vector_store)
+
+    _delete_chroma_collection(settings)
+    _ensure_vector_db_writable(settings.vector_db_path)
+
+
+def reset_vector_store(settings: Settings) -> None:
+    """Backward-compatible alias used by older callers/tests."""
+    clear_vector_collection(settings)
 
 
 def load_index(settings: Settings | None = None) -> Chroma:
     settings = settings or get_settings()
     _ensure_vector_db_writable(settings.vector_db_path)
-    return Chroma(
+    store = Chroma(
         collection_name=settings.collection_name,
         embedding_function=_get_embeddings(settings),
         persist_directory=str(settings.vector_db_path),
     )
+    _ensure_vector_db_writable(settings.vector_db_path)
+    return store
 
 
 def build_index(settings: Settings | None = None) -> IndexResult:
@@ -169,6 +187,7 @@ def build_index(settings: Settings | None = None) -> IndexResult:
         vector_store.add_documents(documents=docs_to_add, ids=ids_to_add)
 
     close_vector_store(vector_store)
+    _ensure_vector_db_writable(settings.vector_db_path)
 
     return IndexResult(
         source_files=len(loaded_documents),
@@ -183,11 +202,11 @@ def build_index(settings: Settings | None = None) -> IndexResult:
 
 
 def rebuild_index(settings: Settings | None = None) -> IndexResult:
-    """Reconvert every source, validate, drop the vector store and rebuild."""
+    """Reconvert every source, validate, clear the collection and rebuild."""
     settings = settings or get_settings()
     conversion, report = prepare_markdown(settings, force=True)
 
-    reset_vector_store(settings)
+    clear_vector_collection(settings)
 
     loaded_documents = scan_knowledge_base(
         settings.knowledge_base_md_path,
@@ -201,6 +220,7 @@ def rebuild_index(settings: Settings | None = None) -> IndexResult:
         vector_store.add_documents(documents=chunks, ids=ids)
 
     close_vector_store(vector_store)
+    _ensure_vector_db_writable(settings.vector_db_path)
 
     return IndexResult(
         source_files=len(loaded_documents),

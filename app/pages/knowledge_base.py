@@ -68,6 +68,7 @@ def render_knowledge_base_page() -> None:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Инкрементальная индексация", use_container_width=True):
+            st.cache_resource.clear()
             with st.spinner("Индексация..."):
                 result = build_index(settings)
             _refresh_after_index(
@@ -76,6 +77,7 @@ def render_knowledge_base_page() -> None:
             )
     with col2:
         if st.button("Полная переиндексация", type="primary", use_container_width=True):
+            st.cache_resource.clear()
             with st.spinner("Переиндексация..."):
                 result = rebuild_index(settings)
             _refresh_after_index(

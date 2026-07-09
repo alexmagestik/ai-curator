@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.rag.indexer import IndexResult, build_index, rebuild_index
+from app.rag.indexer import IndexResult, build_index, rebuild_index, reset_vector_store
 from app.utils.config import Settings
 
 
@@ -77,3 +77,12 @@ def test_rebuild_index_clears_store_and_indexes(settings: Settings) -> None:
     assert not (settings.vector_db_path / "old.txt").exists()
     assert result.chunks_indexed == 1
     mock_store.add_documents.assert_called_once()
+
+
+def test_reset_vector_store_removes_existing_files(settings: Settings) -> None:
+    settings.vector_db_path.mkdir(parents=True)
+    (settings.vector_db_path / "chroma.sqlite3").write_text("db", encoding="utf-8")
+
+    reset_vector_store(settings)
+
+    assert not settings.vector_db_path.exists()

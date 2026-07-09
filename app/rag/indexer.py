@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import gc
 import shutil
+import time
 from dataclasses import dataclass
+from pathlib import Path
 
+import chromadb
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
@@ -66,9 +70,71 @@ def _chunk_id(document: Document) -> str:
     )
 
 
+def _ensure_vector_db_writable(path: Path) -> None:
+    path.mkdir(parents=True, exist_ok=True)
+    try:
+        path.chmod(0o777)
+    except OSError:
+        pass
+
+
+def close_vector_store(vector_store: Chroma | None) -> None:
+    """Release Chroma file handles so the persist directory can be updated."""
+    if vector_store is None:
+        return
+    try:
+        client = getattr(vector_store, "_client", None)
+        if client is not None:
+            reset = getattr(client, "reset", None)
+            if callable(reset):
+                reset()
+    except Exception:
+        pass
+    finally:
+        del vector_store
+        gc.collect()
+
+
+def _delete_chroma_collection(settings: Settings) -> None:
+    if not settings.vector_db_path.exists():
+        return
+    client = None
+    try:
+        client = chromadb.PersistentClient(path=str(settings.vector_db_path))
+        client.delete_collection(settings.collection_name)
+    except Exception:
+        pass
+    finally:
+        if client is not None:
+            del client
+        gc.collect()
+
+
+def reset_vector_store(settings: Settings) -> None:
+    """Drop persisted vectors, tolerating open handles from cached Streamlit resources."""
+    _delete_chroma_collection(settings)
+    path = settings.vector_db_path
+    if not path.exists():
+        return
+
+    gc.collect()
+    time.sleep(0.1)
+
+    try:
+        shutil.rmtree(path)
+        return
+    except OSError:
+        stale = path.with_name(f"{path.name}.stale.{int(time.time())}")
+        try:
+            path.rename(stale)
+        except OSError:
+            return
+        shutil.rmtree(stale, ignore_errors=True)
+
+
 def load_index(settings: Settings | None = None) -> Chroma:
     settings = settings or get_settings()
-    settings.vector_db_path.mkdir(parents=True, exist_ok=True)
+    _ensure_vector_db_writable(settings.vector_db_path)
     return Chroma(
         collection_name=settings.collection_name,
         embedding_function=_get_embeddings(settings),
@@ -102,6 +168,8 @@ def build_index(settings: Settings | None = None) -> IndexResult:
     if docs_to_add:
         vector_store.add_documents(documents=docs_to_add, ids=ids_to_add)
 
+    close_vector_store(vector_store)
+
     return IndexResult(
         source_files=len(loaded_documents),
         chunks_indexed=len(docs_to_add),
@@ -119,8 +187,7 @@ def rebuild_index(settings: Settings | None = None) -> IndexResult:
     settings = settings or get_settings()
     conversion, report = prepare_markdown(settings, force=True)
 
-    if settings.vector_db_path.exists():
-        shutil.rmtree(settings.vector_db_path)
+    reset_vector_store(settings)
 
     loaded_documents = scan_knowledge_base(
         settings.knowledge_base_md_path,
@@ -132,6 +199,8 @@ def rebuild_index(settings: Settings | None = None) -> IndexResult:
     if chunks:
         ids = [_chunk_id(chunk) for chunk in chunks]
         vector_store.add_documents(documents=chunks, ids=ids)
+
+    close_vector_store(vector_store)
 
     return IndexResult(
         source_files=len(loaded_documents),

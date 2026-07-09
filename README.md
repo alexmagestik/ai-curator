@@ -182,7 +182,7 @@ streamlit run streamlit_app.py
 ## Структура проекта
 
 ```text
-PEcf13/
+ai-curator/
 ├── app/
 │   ├── analytics/      # логи, метрики, CSV-экспорт
 │   ├── auth/           # регистрация, вход, роли

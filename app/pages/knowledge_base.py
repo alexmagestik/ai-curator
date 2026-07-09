@@ -25,6 +25,13 @@ def _scan_modules(md_path: Path) -> dict[str, list[str]]:
     return modules
 
 
+def _refresh_after_index(message: str) -> None:
+    """Persist feedback and reload UI so module lists and RAG caches pick up changes."""
+    st.session_state["kb_index_message"] = message
+    st.cache_resource.clear()
+    st.rerun()
+
+
 def render_knowledge_base_page() -> None:
     if not is_admin():
         st.error("Доступ только для администратора.")
@@ -36,6 +43,9 @@ def render_knowledge_base_page() -> None:
         "Конвертированные Markdown-документы (knowledge_base_md/), "
         "статистика по модулям и переиндексация."
     )
+
+    if message := st.session_state.pop("kb_index_message", None):
+        st.success(message)
 
     modules = _scan_modules(settings.knowledge_base_md_path)
     if not modules:
@@ -60,7 +70,7 @@ def render_knowledge_base_page() -> None:
         if st.button("Инкрементальная индексация", use_container_width=True):
             with st.spinner("Индексация..."):
                 result = build_index(settings)
-            st.success(
+            _refresh_after_index(
                 f"Просканировано файлов: {result.source_files}. "
                 f"Новых чанков: {result.chunks_indexed}."
             )
@@ -68,8 +78,7 @@ def render_knowledge_base_page() -> None:
         if st.button("Полная переиндексация", type="primary", use_container_width=True):
             with st.spinner("Переиндексация..."):
                 result = rebuild_index(settings)
-            st.success(
+            _refresh_after_index(
                 f"Проиндексировано файлов: {result.source_files}. "
                 f"Чанков: {result.chunks_indexed}."
             )
-            st.cache_resource.clear()

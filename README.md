@@ -56,6 +56,7 @@
 - Дашборд: запросы по дням, топ тем, топ модулей, % без ответа
 - CSV-экспорт: история запросов, статистика по дням, по пользователям
 - **RAG Debug** — пошаговая диагностика retrieval
+- **A/B тесты** — слепое сравнение системных промптов, метрики Relevance / Hallucinations / Relative Lift
 
 ---
 
@@ -205,6 +206,7 @@ streamlit run streamlit_app.py
 | **Мои диалоги** | user, admin | Список сессий, поиск, продолжение |
 | **База знаний** | admin | Документы по модулям, переиндексация |
 | **RAG Debug** | admin | Запрос → документы → score → контекст → ответ |
+| **A/B тесты** | admin | Слепое сравнение двух системных промптов, метрики Relevance / Hallucinations / Relative Lift |
 | **Аналитика** | admin | Метрики, графики, CSV, просмотр логов |
 | **Пользователи** | admin | Список учётных записей, создание, смена роли, сброс пароля, удаление |
 
@@ -275,6 +277,7 @@ ai-curator/
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | Архитектура и потоки данных |
 | [docs/prompts.md](docs/prompts.md) | Промпты, сценарии, ограничения |
+| [docs/ab_testing.md](docs/ab_testing.md) | A/B тесты промптов, метрики |
 | [docs/rag_pipeline.md](docs/rag_pipeline.md) | RAG-пайплайн, hybrid search |
 | [docs/database.md](docs/database.md) | Схема SQLite |
 | [docs/analytics.md](docs/analytics.md) | Логирование и аналитический отчёт |

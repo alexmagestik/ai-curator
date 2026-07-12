@@ -55,10 +55,20 @@ def format_fewshot_block() -> str:
     return "\n".join(lines)
 
 
-def build_system_prompt(user_level: str = "intermediate") -> str:
+def build_system_prompt(
+    user_level: str = "intermediate",
+    base_prompt: str | None = None,
+) -> str:
+    """Assemble the full system prompt.
+
+    ``base_prompt`` overrides the default ``system_prompt.txt`` content (used
+    for A/B testing). Level instructions and few-shot examples are appended
+    identically regardless of the base, so variants stay comparable.
+    """
     level_block = LEVEL_INSTRUCTIONS.get(user_level, LEVEL_INSTRUCTIONS["intermediate"])
+    base = load_system_prompt() if base_prompt is None else base_prompt.strip()
     return (
-        f"{load_system_prompt()}\n\n"
+        f"{base}\n\n"
         f"{level_block}\n\n"
         f"{format_fewshot_block()}"
     )

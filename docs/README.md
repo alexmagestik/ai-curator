@@ -6,6 +6,7 @@
 | [use_cases.md](use_cases.md) | Заказчик, demo | Готовые сценарии «примерки» ассистента |
 | [architecture.md](architecture.md) | Разработчик | Архитектура, компоненты, Docker |
 | [prompts.md](prompts.md) | Методист, разработчик | Промпты, сценарии, ограничения |
+| [ab_testing.md](ab_testing.md) | Методист, admin | A/B тесты промптов, метрики Relevance/Hallucinations/Relative Lift |
 | [rag_pipeline.md](rag_pipeline.md) | Разработчик | RAG, hybrid search, индексация |
 | [database.md](database.md) | Разработчик | Схема SQLite |
 | [analytics.md](analytics.md) | Admin, аналитик | Логи, метрики, CSV, дашборд |

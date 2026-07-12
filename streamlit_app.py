@@ -2,6 +2,7 @@ import streamlit as st
 
 from app.auth.session import is_admin, is_authenticated
 from app.database.db import init_db
+from app.pages.ab_test import render_ab_test_page
 from app.pages.analytics import render_analytics_page
 from app.pages.auth import render_auth_page
 from app.pages.chat import render_chat_page
@@ -19,7 +20,7 @@ if not is_authenticated():
     st.stop()
 
 USER_PAGES = ["Чат", "Мои диалоги"]
-ADMIN_PAGES = ["База знаний", "RAG Debug", "Аналитика", "Пользователи"]
+ADMIN_PAGES = ["База знаний", "RAG Debug", "A/B тесты", "Аналитика", "Пользователи"]
 
 if "active_page" not in st.session_state:
     st.session_state.active_page = "Чат"
@@ -52,6 +53,8 @@ elif page == "База знаний":
     render_knowledge_base_page()
 elif page == "RAG Debug":
     render_rag_debug_page()
+elif page == "A/B тесты":
+    render_ab_test_page()
 elif page == "Аналитика":
     render_analytics_page()
 elif page == "Пользователи":

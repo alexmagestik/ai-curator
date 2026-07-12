@@ -117,3 +117,9 @@ llm = get_llm()  # LLM_PROVIDER=openai в .env
 1. Измените `system_prompt.txt` или `fewshot_examples.json`.
 2. Перезапустите Streamlit (кэш `@lru_cache` в loader сбросится при рестарте).
 3. Проверьте качество на странице **RAG Debug** (admin).
+
+## A/B тестирование промптов
+
+Прежде чем менять `system_prompt.txt`, можно сравнить новую формулировку с текущей
+на странице **A/B тесты** (admin): слепая оценка ответов и метрики Relevance,
+Hallucinations, Relative Lift. Подробнее — [ab_testing.md](ab_testing.md).

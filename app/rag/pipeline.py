@@ -54,6 +54,7 @@ class RAGPipeline:
         filters: dict[str, str] | None = None,
         chat_history: list[dict[str, str]] | None = None,
         max_history_messages: int = 10,
+        base_system_prompt: str | None = None,
     ) -> RAGResponse:
         if user_level not in USER_LEVELS:
             user_level = "intermediate"
@@ -61,7 +62,73 @@ class RAGPipeline:
         retrieved = self.retriever.search(question, filters=filters)
         context = build_context(retrieved)
         sources = extract_sources(retrieved)
-        system_prompt = build_system_prompt(user_level=user_level)
+
+        return self._generate(
+            question,
+            retrieved=retrieved,
+            context=context,
+            sources=sources,
+            user_level=user_level,
+            chat_history=chat_history,
+            max_history_messages=max_history_messages,
+            base_system_prompt=base_system_prompt,
+        )
+
+    def compare_prompts(
+        self,
+        question: str,
+        base_system_prompt_a: str | None,
+        base_system_prompt_b: str | None,
+        *,
+        user_level: str = "intermediate",
+        filters: dict[str, str] | None = None,
+    ) -> tuple[RAGResponse, RAGResponse]:
+        """Run two system prompts against the same retrieval/context.
+
+        Retrieval happens once so both variants share identical context and
+        the only difference is the base system prompt. Used by the A/B page.
+        """
+        if user_level not in USER_LEVELS:
+            user_level = "intermediate"
+
+        retrieved = self.retriever.search(question, filters=filters)
+        context = build_context(retrieved)
+        sources = extract_sources(retrieved)
+
+        response_a = self._generate(
+            question,
+            retrieved=retrieved,
+            context=context,
+            sources=sources,
+            user_level=user_level,
+            base_system_prompt=base_system_prompt_a,
+        )
+        response_b = self._generate(
+            question,
+            retrieved=retrieved,
+            context=context,
+            sources=sources,
+            user_level=user_level,
+            base_system_prompt=base_system_prompt_b,
+        )
+        return response_a, response_b
+
+    def _generate(
+        self,
+        question: str,
+        *,
+        retrieved: list[RetrievedDocument],
+        context: str,
+        sources: list[SourceReference],
+        user_level: str = "intermediate",
+        chat_history: list[dict[str, str]] | None = None,
+        max_history_messages: int = 10,
+        base_system_prompt: str | None = None,
+    ) -> RAGResponse:
+        system_prompt = build_system_prompt(
+            user_level=user_level,
+            base_prompt=base_system_prompt,
+        )
 
         messages: list[SystemMessage | HumanMessage | AIMessage] = [
             SystemMessage(content=system_prompt)
